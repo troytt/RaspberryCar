@@ -11,18 +11,20 @@ import Queue
 import socket
 
 http_port = 8001
-socket_addr = '139.196.106.212'
+#socket_addr = '139.196.106.212'
+socket_addr = 'localhost'
 socket_port = 8002
 queue = Queue.Queue()
+last_ping_time = 0
+client_active = False
+
 
 class TestHTTPHandler(BaseHTTPRequestHandler):
-  def __init__(self):
-    self._active = False
-    self._last_ping_time = 0
-    BaseHTTPRequestHandler.__init__(self)
-
   def do_GET(self):
     global queue
+    global last_ping_time
+    global client_active
+
 
     parsed = urlparse(self.path)
     path = parsed.path
@@ -44,11 +46,10 @@ class TestHTTPHandler(BaseHTTPRequestHandler):
       return
 
     if path == '/ping':
-      if self._active:
-        self._last_ping_time = time.time()
+      last_ping_time = time.time()
 
     if path == '/action':
-      self._active = True
+      client_active = True
       parameters = parse_qs(parsed.query)
       action = parameters.get('action', None)
       key = parameters.get('key', None)
@@ -65,19 +66,6 @@ class TestHTTPHandler(BaseHTTPRequestHandler):
       self.send_response(200)
       self.end_headers()
       return
-  
-  def IsActive(self):
-    return self._active
-
-  def LastPingTime(self):
-    return self._last_ping_time
-
-  def SendStopCommand(self):
-    """ Send a stop command to raspberry"""
-    global queue
-    queue.put(('STOP', 1))
-    pass
-
 
 class SocketServer(threading.Thread):
   def __init__(self, addr, port):
@@ -87,6 +75,7 @@ class SocketServer(threading.Thread):
     self._server.listen(1)
     self._run = True
     threading.Thread.__init__(self)
+    print 'Socket server started'
 
   def WaitClient(self):
     client, address = self._server.accept()
@@ -94,6 +83,7 @@ class SocketServer(threading.Thread):
     return client
 
   def StopServer(self):
+    self._queue.put(('TERMINATE', 1))
     self._run = False
 
   def run(self):
@@ -102,11 +92,15 @@ class SocketServer(threading.Thread):
       try:
         key, action = self._queue.get()
         data = '%s %d/' % (key, action)
-        client.send(data.encode())
+        if key == 'TERMINATE':
+          client.close()
+          self._server.close()
+          break
+        else:
+          client.send(data.encode())
       except socket.error as e:
-        time.sleep(0.1)
         client = self.WaitClient()
-    client.close()
+    print 'Socket Server stopped'
 
 
 class ControlServer(threading.Thread):
@@ -114,7 +108,7 @@ class ControlServer(threading.Thread):
       A web server to recieve commands from user,
       A socket server to send commands to raspberry.
   """
-  def __init__(self, port):
+  def __init__(self):
     self._http_server = None
     self._socket_server = None
     self._run = False
@@ -128,16 +122,26 @@ class ControlServer(threading.Thread):
     self._socket_server.start()
     while self._run:
       self._http_server.handle_request()
-    
+    print 'HTTP server stopped'
+
   def CheckLive(self):
+    global client_active
+    global last_ping_time
+    print 'Start check client live'
     while self._run:
-      if self._http_server.IsActive():
-        if time.time() - self._http_server.LastPingTime() > 1:
-          print 'Client dead, stop'
-          self._http_server.SendStopCommand()
+      if client_active:
+        if time.time() - last_ping_time > 1:
+          print 'Client leave, stop'
+          client_active = False
+          self.SendStopCommand()
       time.sleep(0.1)
 
+  def SendStopCommand(self):
+    print 'Send STOP'
+    GetQueue().put(('STOP', 1))
+
   def StopServer(self):
+    print 'Stop all servers'
     self._run = False
     self._socket_server.StopServer()
     self._socket_server.join()
@@ -153,7 +157,8 @@ server.start()
 try:
   server.CheckLive()
 except:
-  ControlServer.StopServer()
+  print 'error, stop servers'
+  server.StopServer()
 
 server.join()
 
