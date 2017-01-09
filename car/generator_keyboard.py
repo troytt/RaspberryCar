@@ -4,6 +4,19 @@ from evdev import InputDevice, list_devices
 from select import select
 
 class GeneratorKeyboard(generator.Generator):
+  _cmd_map = {
+    evdev.ecodes.ecodes['KEY_UP']    : 'CAR_F',  # forward
+    evdev.ecodes.ecodes['KEY_DOWN']  : 'CAR_B',  # backward
+    evdev.ecodes.ecodes['KEY_LEFT']  : 'CAR_L',  # turn left
+    evdev.ecodes.ecodes['KEY_RIGHT'] : 'CAR_R',  # turn right
+    evdev.ecodes.ecodes['KEY_J']     : 'CAR_D',  # slow down
+    evdev.ecodes.ecodes['KEY_K']     : 'CAR_U',  # speed up
+    evdev.ecodes.ecodes['KEY_L']     : 'STOP',   # terminate
+    evdev.ecodes.ecodes['KEY_A']     : 'CM_L',  # camera turn left
+    evdev.ecodes.ecodes['KEY_D']     : 'CM_R',  # camera turn right
+    evdev.ecodes.ecodes['KEY_W']     : 'CM_U',  # camera up
+    evdev.ecodes.ecodes['KEY_S']     : 'CM_D',  # camera down
+  }
 
   def __init__(self, fn):
     self._dev = InputDevice(fn)
@@ -13,7 +26,8 @@ class GeneratorKeyboard(generator.Generator):
     while self._run:
       select([self._dev], [], [])
       for event in self._dev.read():
-        self.Put((event.code, event.value))
+        if event.code in self._cmd_map:
+          self.Put((self._cmd_map[event.code], event.value))
     print 'Generator Terminated'
 
 if __name__ == '__main__':
