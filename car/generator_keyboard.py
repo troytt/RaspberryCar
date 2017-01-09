@@ -27,11 +27,10 @@ class GeneratorKeyboard(generator.Generator):
       select([self._dev], [], [])
       for event in self._dev.read():
         if event.code in self._cmd_map:
-          self.Put((self._cmd_map[event.code], event.value))
+          self.Put(self._cmd_map[event.code], event.value)
     print 'Generator Terminated'
 
 if __name__ == '__main__':
-  gen = None
   print list_devices()
   devices = [InputDevice(fn) for fn in list_devices()]
   index = 0

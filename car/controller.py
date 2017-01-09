@@ -1,3 +1,4 @@
+import time
 import car
 
 # valide cmd:
@@ -11,15 +12,26 @@ class Controller(object):
   _camera_control = ['CM_L', 'CM_R', 'CM_U', 'CM_D']
   _car_control = ['STOP']
 
-  def __init__(generator, car, camera):
+  def __init__(self, generator, car, camera):
     self._generator = generator
     self._run = True
     self._car = car
     self._camera = camera
 
+    self._car_f = 0
+    self._car_b = 0
+    self._car_l = 0
+    self._car_r = 0
+
   def run(self):
+    self._generator.start()
+    self._car.start()
     while self._run:
-      for code, value in gen.GetNext():
+      for data in gen.GetNext():
+        print data
+        code = data[0]
+        value = data[1]
+      #for code, value in gen.GetNext():
         if code in self._car_control:
           self.ChangeCar(code, value)
         elif code in self._car_direction:
@@ -36,13 +48,28 @@ class Controller(object):
   def ChangeCarDirection(self, code, value):
     if value in [0, 1]:
       if code == 'CAR_F':
-        f = value
+        self._car_f = value
       elif code == 'CAR_B':
-        b = value
+        self._car_b = value
       elif code == 'CAR_R':
-        r = value
+        self._car_r = value
       elif code == 'CAR_L':
-        l = value      
+        self._car_l = value
+    l = 0
+    r = 0
+    if self._car_f:
+      l = 1
+      r = 1
+    elif self._car_b:
+      l = -1
+      r = -1
+    if self._car_r:
+      r = 0
+    elif self._car_l:
+      l = 0
+    print code, value, l, r
+    self._car._left_direction = l
+    self._car._right_direction = r
 
   def ChangeCamera(self, code, value):
     pass
@@ -54,4 +81,22 @@ class Controller(object):
       elif code == 'CAR_D':
         self._car.SlowDown()
 
+  def Terminate(self):
+    self._run = False
+    self._generator.Terminate()
+    self._car.Terminate()
+    self._generator.join()
+    self._car.join()
+
+if __name__ == '__main__':
+  import generator_socket
+  gen = generator_socket.GeneratorSocket()
+  car = car.Car((11, 12, 10), (13, 14, 10), True)
+
+  c = Controller(gen, car, None)
+
+  try:
+    c.run()
+  except:
+    c.Terminate()
 

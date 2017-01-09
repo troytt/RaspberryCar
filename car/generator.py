@@ -16,8 +16,8 @@ class Generator(threading.Thread):
   def GetNext(self):
     return self._queue.get()
 
-  def Put(self, data):
-    self._queue.put(data)
+  def Put(self, key, action):
+    self._queue.put([(key, action)])
 
   def Terminate(self):
     self._run = False
