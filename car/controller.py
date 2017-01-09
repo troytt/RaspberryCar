@@ -1,6 +1,7 @@
 import time
 import car
-
+import os
+import threading
 # valide cmd:
 # Car directions : CAR_F, CAR_B, CAR_L, CAR_R
 # Car speeds     : CAR_U, CAR_D
@@ -88,15 +89,19 @@ class Controller(object):
     self._generator.join()
     self._car.join()
 
+def EnableCamera():
+  while True:
+    print 'Open camera live'
+    os.system("""gst-launch-1.0 -v v4l2src ! 'video/x-raw, width=640, height=480, framerate=30/1' ! queue ! videoconvert ! omxh264enc !  h264parse ! flvmux ! rtmpsink location='rtmp://139.196.106.212/rtmp/live live=1'""")
+    time.sleep(1)
+
 if __name__ == '__main__':
   import generator_socket
   gen = generator_socket.GeneratorSocket()
   car = car.Car((11, 12, 10), (13, 14, 10), True)
 
+  live = threading.Thread(target = EnableCamera)
+  live.start()
   c = Controller(gen, car, None)
-
-  try:
-    c.run()
-  except:
-    c.Terminate()
+  c.run()
 
