@@ -10,27 +10,19 @@ from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import Queue
 import socket
 
+http_port = 8001
+socket_addr = '139.196.106.212'
+socket_port = 8002
 queue = Queue.Queue()
-lastPingTime = 0
-active = False
-run = True
-
-def CheckLive():
-  global run
-  global active
-  global lastPingTime
-  while run:
-    if active:
-      if time.time() - lastPingTime > 1:
-        print 'Client dead, stop'
-        run = False
-    time.sleep(0.1)
 
 class TestHTTPHandler(BaseHTTPRequestHandler):
+  def __init__(self):
+    self._active = False
+    self._last_ping_time = 0
+    BaseHTTPRequestHandler.__init__(self)
+
   def do_GET(self):
     global queue
-    global lastPingTime
-    global active
 
     parsed = urlparse(self.path)
     path = parsed.path
@@ -52,11 +44,11 @@ class TestHTTPHandler(BaseHTTPRequestHandler):
       return
 
     if path == '/ping':
-      if active:
-        lastPingTime = time.time()
+      if self._active:
+        self._last_ping_time = time.time()
 
     if path == '/action':
-      active = True
+      self._active = True
       parameters = parse_qs(parsed.query)
       action = parameters.get('action', None)
       key = parameters.get('key', None)
@@ -73,59 +65,97 @@ class TestHTTPHandler(BaseHTTPRequestHandler):
       self.send_response(200)
       self.end_headers()
       return
+  
+  def IsActive(self):
+    return self._active
+
+  def LastPingTime(self):
+    return self._last_ping_time
+
+  def SendStopCommand(self):
+    """ Send a stop command to raspberry"""
+    global queue
+    queue.put(('STOP', 1))
+    pass
+
 
 class SocketServer(threading.Thread):
-  def __init__(self):
+  def __init__(self, addr, port):
     self._queue = GetQueue()
     self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    self._server.bind(('139.196.106.212', 8002))
+    self._server.bind((addr, port))
     self._server.listen(1)
+    self._run = True
     threading.Thread.__init__(self)
 
-  def run(self):
+  def WaitClient(self):
     client, address = self._server.accept()
     print 'Client', address, ' connect'
-    while True:
+    return client
+
+  def StopServer(self):
+    self._run = False
+
+  def run(self):
+    client = self.WaitClient()
+    while self._run:
       try:
         key, action = self._queue.get()
         data = '%s %d/' % (key, action)
         client.send(data.encode())
-        print 'send', data
-      except:
-        client, address = self._server.accept()
-        print 'Client', address, ' connect'
+      except socket.error as e:
+        time.sleep(0.1)
+        client = self.WaitClient()
+    client.close()
+
 
 class ControlServer(threading.Thread):
+  """ Control server has two opponents:
+      A web server to recieve commands from user,
+      A socket server to send commands to raspberry.
+  """
   def __init__(self, port):
     self._http_server = None
-    self._port = port
+    self._socket_server = None
     self._run = False
-    self._socket_server = SocketServer()
     threading.Thread.__init__(self)
 
   def run(self):
     os.chdir('static')
     self._run = True
-    self._http_server = HTTPServer(('', self._port), TestHTTPHandler)
+    self._socket_server = SocketServer(socket_addr, socket_port)
+    self._http_server = HTTPServer(('', http_port), TestHTTPHandler)
     self._socket_server.start()
     while self._run:
       self._http_server.handle_request()
+    
+  def CheckLive(self):
+    while self._run:
+      if self._http_server.IsActive():
+        if time.time() - self._http_server.LastPingTime() > 1:
+          print 'Client dead, stop'
+          self._http_server.SendStopCommand()
+      time.sleep(0.1)
 
   def StopServer(self):
     self._run = False
+    self._socket_server.StopServer()
+    self._socket_server.join()
 
 def GetQueue():
   global queue
   return queue
 
-#t = threading.Thread(target = CheckLive)
-#t.start()
 
-server = ControlServer(8001)
+
+server = ControlServer()
 server.start()
+try:
+  server.CheckLive()
+except:
+  ControlServer.StopServer()
 
-#server.StopServer()
-#print 'stop all'
-#server.join()
-#t.join()
+server.join()
+
+
 
