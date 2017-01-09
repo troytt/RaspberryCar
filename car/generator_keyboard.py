@@ -7,13 +7,13 @@ class GeneratorKeyboard(generator.Generator):
 
   def __init__(self, fn):
     self._dev = InputDevice(fn)
+    generator.Generator.__init__(self)
 
   def run(self):
     while self._run:
       select([self._dev], [], [])
       for event in self._dev.read():
         self.Put((event.code, event.value))
-        ret.append((event.code, event.value))
     print 'Generator Terminated'
 
 if __name__ == '__main__':
@@ -27,7 +27,8 @@ if __name__ == '__main__':
 
   index = int(raw_input())
   if index >= 0 and index < len(devices):
-    gen = LocalInputGenerator(devices[index].fn)
+    g = GeneratorKeyboard(devices[index].fn)
+    g.start()
     for i in range(0, 10):
       print 'get', g.GetNext()
     g.Terminate()
