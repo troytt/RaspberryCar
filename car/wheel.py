@@ -10,10 +10,6 @@ class Wheel(wheel_base.WheelBase):
 
   def __init__(self, name, ports):
     forward_port, backward_port, enable_port = ports
-    self._forward_port = forward_port
-    self._backward_port = backward_port
-    self._enable_port = enable_port
-    self._name = name
     GPIO.setup(forward_port, GPIO.OUT)
     GPIO.setup(backward_port, GPIO.OUT)
     GPIO.setup(enable_port, GPIO.OUT)
@@ -21,7 +17,7 @@ class Wheel(wheel_base.WheelBase):
     GPIO.output(forward_port, False)
     GPIO.output(backward_port, False)
     GPIO.output(enable_port, True)
-    wheel_base.WheelBase.__init__(self)
+    wheel_base.WheelBase.__init__(self, name, ports)
 
   def Forward(self):
     if self.SpeedControl():

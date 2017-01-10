@@ -95,10 +95,14 @@ def EnableCamera():
     os.system("""gst-launch-1.0 -v v4l2src ! 'video/x-raw, width=640, height=480, framerate=30/1' ! queue ! videoconvert ! omxh264enc !  h264parse ! flvmux ! rtmpsink location='rtmp://139.196.106.212/rtmp/live live=1'""")
     time.sleep(1)
 
+
 if __name__ == '__main__':
   import generator_socket
+  import RPi.GPIO as GPIO
+  GPIO.setmode(GPIO.BOARD)
+  GPIO.setwarnings(True)
   gen = generator_socket.GeneratorSocket()
-  car = car.Car((11, 12, 10), (13, 14, 10), True)
+  car = car.Car((18, 22, 40), (16, 15, 40))
 
   live = threading.Thread(target = EnableCamera)
   live.start()

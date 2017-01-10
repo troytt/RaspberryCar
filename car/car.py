@@ -9,8 +9,8 @@ class Car(threading.Thread):
       self._right_wheel = wheel_base.WheelBase('Right wheel', right_wheel_ports)
     else:
       import wheel
-      self._left_wheel = wheel.Wheel(left_wheel_ports)
-      self._right_wheel = wheel.Wheel(right_wheel_ports)
+      self._left_wheel = wheel.Wheel('Left wheel', left_wheel_ports)
+      self._right_wheel = wheel.Wheel('Right wheel', right_wheel_ports)
 
     self._left_direction = 0
     self._right_direction = 0
