@@ -1,0 +1,77 @@
+<html>
+<head>
+	<title>Controller</title>
+	<script language='javascript' src='/jquery.js'></script>
+</head>
+<body>
+    <center>
+    <div id="StrobeMediaPlayback"></div>      
+    </center>
+  </body>
+
+<!-- strobe -->
+<script type="text/javascript" src="http://139.196.106.212/html/strobe/lib/swfobject.js"></script>
+<script type="text/javascript">
+  var parameters = {
+     src: "rtmp://139.196.106.212/rtmp/live",
+     autoPlay: true,
+     controlBarAutoHide: false,
+     playButtonOverlay: true,
+     showVideoInfoOverlayOnStartUp: true,
+     optimizeBuffering : false,
+     initialBufferTime : 0.1,
+     expandedBufferTime : 0.1,
+     minContinuousPlayback : 0.1,
+     poster: "images/poster.png"
+  };
+  swfobject.embedSWF(
+    "http://139.196.106.212/html/strobe/StrobeMediaPlayback.swf"
+    , "StrobeMediaPlayback"
+    , 1024
+    , 768
+    , "10.1.0"
+    , "strobe/expressInstall.swf"
+    , parameters
+    , {
+      allowFullScreen: "true"
+    }
+    , {
+      name: "StrobeMediaPlayback"
+    }
+  );
+</script>
+
+<script language='javascript'>
+var url = location.href;
+var idx= url.lastIndexOf(':');
+url = url.substring(0,idx) + ':8080/?action=stream';
+//$('img').attr('src', url);
+
+
+var last_key = false;
+var last_action = false;
+
+function handle(key, action) {
+	if (last_key == key && last_action == action) return;
+	console.log(key + ' ' + action);
+	last_key = key;
+	last_action = action;
+	$.ajax({
+		url: "/action?key=" + key + '&action=' + action
+	});
+}
+
+$(document).keydown(function(e) {
+	handle(e.which, 'down');
+}).keyup(function(e) {
+	handle(e.which, 'up');
+});
+
+setInterval(function() {
+	$.ajax({url:'/ping'});
+}, 200);
+
+
+</script> 
+
+</html>
