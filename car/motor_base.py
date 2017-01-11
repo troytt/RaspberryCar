@@ -12,9 +12,9 @@ class MotorBase():
     signal = 2.5 + 10 * self._degree / 180
     if signal < 0 or signal > 100:
       return
-    print 'Send signal', signal
+    #print 'Send signal', signal
     time.sleep(0.02)
-    print 'Send signal', 0
+    #print 'Send signal', 0
     time.sleep(0.2)
 
   def TurnLeft(self):
