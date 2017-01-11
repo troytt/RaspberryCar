@@ -69,6 +69,7 @@ class PiHTTPHandler(BaseHTTPRequestHandler):
         key = key[0]
         action = action[0]
         if key in cmd_map:
+          key = cmd_map[key]
           if action in ['up', 'down']:
             if action == 'up':
               action = 0

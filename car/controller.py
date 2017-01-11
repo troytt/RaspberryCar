@@ -27,12 +27,12 @@ class Controller(object):
   def run(self):
     self._generator.start()
     self._car.start()
+    self._camera.start()
     while self._run:
       for data in gen.GetNext():
         print data
         code = data[0]
         value = data[1]
-      #for code, value in gen.GetNext():
         if code in self._car_control:
           self.ChangeCar(code, value)
         elif code in self._car_direction:
@@ -73,7 +73,16 @@ class Controller(object):
     self._car._right_direction = r
 
   def ChangeCamera(self, code, value):
-    pass
+    if value == 0:
+      return
+    if code == 'CM_L':
+      self._camera.TurnLeft()
+    elif code == 'CM_R':
+      self._camera.TurnRight()
+    elif code == 'CM_U':
+      self._camera.TurnUp()
+    elif code == 'CM_D':
+      self._camera.TurnDown()
 
   def ChangeCarSpeed(self, code, value):
     if value == 1:
@@ -97,15 +106,19 @@ def EnableCamera():
 
 
 if __name__ == '__main__':
-  import generator_socket
-  import RPi.GPIO as GPIO
-  GPIO.setmode(GPIO.BOARD)
-  GPIO.setwarnings(True)
-  gen = generator_socket.GeneratorSocket()
-  car = car.Car((18, 22, 40), (16, 15, 40))
+  import generator_web
+  import camera
+  #import generator_socket
+  #import RPi.GPIO as GPIO
+  #GPIO.setmode(GPIO.BOARD)
+  #GPIO.setwarnings(True)
+  #gen = generator_socket.GeneratorSocket()
+  gen = generator_web.GeneratorWeb()
+  car = car.Car((18, 22, 40), (16, 15, 40), True)
+  camera = camera.Camera(3, 6, True)
 
-  live = threading.Thread(target = EnableCamera)
-  live.start()
-  c = Controller(gen, car, None)
+  #live = threading.Thread(target = EnableCamera)
+  #live.start()
+  c = Controller(gen, car, camera)
   c.run()
 
