@@ -11,8 +11,7 @@ import Queue
 import socket
 
 http_port = 8001
-#socket_addr = '139.196.106.212'
-socket_addr = 'localhost'
+socket_addr = '139.196.106.212'
 socket_port = 8002
 queue = Queue.Queue()
 last_ping_time = 0
@@ -97,6 +96,7 @@ class SocketServer(threading.Thread):
           self._server.close()
           break
         else:
+          print data
           client.send(data.encode())
       except socket.error as e:
         client = self.WaitClient()
@@ -138,7 +138,7 @@ class ControlServer(threading.Thread):
 
   def SendStopCommand(self):
     print 'Send STOP'
-    GetQueue().put(('STOP', 1))
+    GetQueue().put(('76', 1))
 
   def StopServer(self):
     print 'Stop all servers'
